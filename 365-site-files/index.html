@@ -1,0 +1,250 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project 365 Paid Media</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+  /* Layout: one centered reading column, tabs across the top, plain ruled tables; the only object-styled element is the refresh control. */
+  :root {
+    --bg: #fbfaf7; --fg: #1d1f24; --muted: #6b6f78; --rule: #dcdad3; --rule-strong: #8f8a80;
+    --accent: #24476e; --accent-fg: #ffffff; --soft: #eef1f4; --ok: #2f6b3a; --bad: #9d3a2f;
+    --serif: "Source Serif 4", Georgia, "Times New Roman", serif;
+    --sans: "IBM Plex Sans", "Helvetica Neue", Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+    --bg: #15171b; --fg: #ecebe6; --muted: #9a9ea8; --rule: #2d3138; --rule-strong: #6a6f78;
+    --accent: #8fb3dc; --accent-fg: #0f1a27; --soft: #1e2227; --ok: #7fc48e; --bad: #e08a7e; color-scheme: dark } }
+  :root[data-theme="dark"] {
+    --bg: #15171b; --fg: #ecebe6; --muted: #9a9ea8; --rule: #2d3138; --rule-strong: #6a6f78;
+    --accent: #8fb3dc; --accent-fg: #0f1a27; --soft: #1e2227; --ok: #7fc48e; --bad: #e08a7e; color-scheme: dark }
+
+  body { background: var(--bg); color: var(--fg); font-family: var(--sans); font-size: 15px; line-height: 1.5;
+    padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 28px 56px;
+    font-variant-numeric: tabular-nums; }
+  .wrap { max-width: 56rem; margin-inline: auto; }
+  h1 { font-family: var(--serif); font-weight: 400; font-size: 1.9rem; margin: 0 0 .25rem; text-wrap: balance; }
+  h2 { font-family: var(--serif); font-weight: 400; font-size: 1.5rem; margin: 0 0 .4rem; text-wrap: balance; }
+  h3 { font-size: .8rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin: 2rem 0 .5rem; }
+  .sub { margin: 0; color: var(--muted); }
+  .bar { display: flex; flex-wrap: wrap; gap: .75rem 1.25rem; align-items: center; margin: 1rem 0 1.25rem; }
+  .stamp { color: var(--muted); font-size: .85rem; }
+  button.refresh { font: inherit; font-weight: 500; font-size: .9rem; background: var(--accent); color: var(--accent-fg); border: 0; border-radius: 6px; padding: .45rem .9rem; cursor: pointer; }
+  button.refresh:disabled { opacity: .55; cursor: default; }
+  button.refresh.secondary { background: var(--soft); color: var(--fg); border: 1px solid var(--rule-strong); }
+  button.refresh:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+  .status { font-size: .85rem; color: var(--muted); }
+  .status.bad { color: var(--bad); }
+  .status.ok { color: var(--ok); }
+  .tabs { display: flex; gap: 1.5rem; border-bottom: 1px solid var(--rule); margin-bottom: 1.75rem; overflow-x: auto; }
+  .tabs button { background: none; border: 0; border-bottom: 2px solid transparent; padding: .5rem 0; margin-bottom: -1px; font: inherit; color: var(--muted); cursor: pointer; white-space: nowrap; }
+  .tabs button[aria-selected="true"] { color: var(--fg); border-bottom-color: var(--fg); }
+  .tabs button:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  p.lead { margin: 0 0 1.25rem; color: var(--muted); max-width: 42rem; }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; min-width: 0; }
+  th, td { text-align: left; padding: .5rem .6rem .5rem 0; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { font-size: .75rem; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--muted); border-bottom-color: var(--rule-strong); }
+  th.n, td.n { text-align: right; white-space: nowrap; }
+  tr.total td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--rule-strong); }
+  td.dim, tr.pending td { color: var(--muted); }
+  .empty { color: var(--muted); padding: 2rem 0; }
+  td a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+  .foot { margin-top: 2.5rem; color: var(--muted); font-size: .8rem; }
+  @media (max-width: 480px) { .hide { display: none; } body { font-size: 14px; } }
+  @media (prefers-reduced-motion: no-preference) { button.refresh { transition: opacity .2s; } }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+  <h1>Project 365 — Paid Media</h1>
+  <p class="sub">Linear (broadcast and cable) to date, with digital by tactic as it is placed. All points in :30 equivalents.</p>
+  <div class="bar">
+    <span class="stamp" id="stamp">Loading…</span>
+
+  </div>
+
+  <div class="tabs" role="tablist" id="tabs"></div>
+
+  <section id="page-overview">
+    <h2>All states</h2>
+    <p class="lead" id="lead-overview">—</p>
+    <div class="tablewrap"><table id="t-states">
+      <thead><tr><th>State</th><th class="n">Broadcast ($)</th><th class="n">Cable ($)</th><th class="n">Digital ($)</th><th class="n">Total ($)</th><th class="n hide">Bcast pts</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <p class="empty" id="empty" hidden>No numbers yet.</p>
+    <p class="foot">Each state runs on its own week calendar; see the state pages for dates.</p>
+  </section>
+  <div id="state-pages"></div>
+</div>
+
+<template id="state-tpl">
+  <section hidden>
+    <h2 class="s-name"></h2>
+    <p class="lead s-lead"></p>
+    <h3>Week by week</h3>
+    <div class="tablewrap"><table class="s-weeks">
+      <thead><tr><th>Week</th><th class="hide">Dates</th><th class="n">Broadcast (pts)</th><th class="n">Cable ($)</th><th class="n">Digital ($)</th><th class="n">Total spend ($)</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <h3>Spots on air</h3>
+    <div class="tablewrap"><table class="s-spots">
+      <thead><tr><th>Market</th><th>Spots</th><th class="n">Points</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+    <h3>Digital by tactic</h3>
+    <p class="lead s-dig-note" hidden>No digital placed yet.</p>
+    <div class="tablewrap"><table class="s-digital">
+      <thead><tr><th>Tactic</th><th class="hide">Vendor / platform</th><th class="n">Spend ($)</th></tr></thead>
+      <tbody></tbody>
+    </table></div>
+  </section>
+</template>
+
+<script>
+(() => {
+  const FILE_ID = '14mhzE_zd1GmJZNZogX_0tgAcMoJk2Do0cu6buLvo9pM';
+  const SERVER = 'Google Drive';
+  const XLSX = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet';
+  const STATES = { IA: 'Iowa', MS: 'Mississippi', TX: 'Texas' };
+
+  const $ = (s, el = document) => el.querySelector(s);
+  const fmt$ = (v) => '$' + Math.round(v).toLocaleString('en-US');
+  const fmtN = (v) => Math.round(v).toLocaleString('en-US');
+  const money = (v) => v ? fmt$(v) : '—';
+  const count = (v) => v ? fmtN(v) : '—';
+
+  // ---------- rendering ----------
+  const tabs = $('#tabs'), pages = new Map([['overview', $('#page-overview')]]);
+  function addTab(id, label) {
+    if ([...tabs.children].some((b) => b.dataset.page === id)) return;
+    const b = document.createElement('button'); b.setAttribute('role', 'tab'); b.textContent = label; b.dataset.page = id;
+    b.addEventListener('click', () => show(id)); tabs.append(b);
+  }
+  function show(id) {
+    if (!pages.has(id)) id = 'overview';
+    for (const [pid, el] of pages) el.hidden = pid !== id;
+    tabs.querySelectorAll('button').forEach((b) => b.setAttribute('aria-selected', String(b.dataset.page === id)));
+    if (id !== 'overview') history.replaceState(null, '', '#' + id); else history.replaceState(null, '', location.pathname);
+  }
+  addTab('overview', 'Overview');
+  function ensurePage(state) {
+    const id = state.toLowerCase().replace(/\s+/g, '-');
+    if (pages.has(id)) return pages.get(id);
+    const frag = $('#state-tpl').content.cloneNode(true);
+    const sec = frag.querySelector('section'); sec.id = 'page-' + id;
+    sec.querySelector('.s-name').textContent = state;
+    $('#state-pages').append(frag); pages.set(id, sec); addTab(id, state);
+    return sec;
+  }
+  function td(tr, text, cls) { const c = document.createElement('td'); c.textContent = text; if (cls) c.className = cls; tr.append(c); return c; }
+  const normName = (s) => String(s).toLowerCase().replace(/[()]/g, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
+  function linkFor(name, links) {
+    const n = normName(name); if (!n) return null;
+    for (const [k, url] of Object.entries(links || {})) { const kn = normName(k); if (kn === n || n.startsWith(kn + ' ') || kn.startsWith(n + ' ')) return url; }
+    return null;
+  }
+  function tdLinks(tr, names, links) {
+    const c = document.createElement('td');
+    names.forEach((nm, i) => {
+      if (i) c.append(', ');
+      const url = linkFor(nm, links);
+      if (url && /^https?:\/\//.test(url)) { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = nm; c.append(a); }
+      else c.append(nm);
+    });
+    if (!names.length) c.textContent = '—';
+    tr.append(c);
+  }
+  function fillTable(table, rows, cols, withTotal) {
+    const tb = table.querySelector('tbody'); tb.replaceChildren();
+    for (const r of rows) {
+      const tr = document.createElement('tr');
+      if ('week' in r && !r.total && !r.points) tr.className = 'pending';
+      for (const [f, kind, extra] of cols) {
+        if (kind === 'links') { tdLinks(tr, r[f] || [], r.links); continue; }
+        const v = kind === '$' ? money(r[f]) : kind === 'n' ? count(r[f]) : (r[f] || '—');
+        td(tr, v, [kind === '$' || kind === 'n' ? 'n' : '', kind === 'dim' ? 'dim' : '', extra || ''].join(' ').trim());
+      }
+      tb.append(tr);
+    }
+    if (withTotal && rows.length) {
+      const tr = document.createElement('tr'); tr.className = 'total';
+      cols.forEach(([f, kind, extra], i) => td(tr, i === 0 ? 'Total' : kind === '$' ? money(rows.reduce((a, r) => a + (r[f] || 0), 0)) : kind === 'n' ? count(rows.reduce((a, r) => a + (r[f] || 0), 0)) : '', [kind === '$' || kind === 'n' ? 'n' : '', extra || ''].join(' ').trim()));
+      tb.append(tr);
+    }
+  }
+  function aggregate(rows) {
+    const byState = new Map(), byWeek = new Map(), digital = new Map();
+    const bucket = (r) => r.type === 'Digital' ? 'digital' : r.tactic === 'Cable' ? 'cable' : 'broadcast';
+    for (const r of rows) {
+      const s = r.spend || 0, b = bucket(r);
+      const st = byState.get(r.state) || { state: r.state, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
+      st[b] += s; st.total += s; if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
+      const wk = r.state + '|' + r.week_num;
+      const w = byWeek.get(wk) || { state: r.state, week: r.week, week_num: r.week_num, dates: r.dates, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
+      w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; byWeek.set(wk, w);
+      if (r.type === 'Digital') {
+        const dk = r.state + '|' + r.tactic + '|' + (r.market || '');
+        const d = digital.get(dk) || { state: r.state, tactic: r.tactic, market: r.market || '', spend: 0 };
+        d.spend += s; digital.set(dk, d);
+      }
+    }
+    const spots = new Map();
+    for (const r of rows) {
+      if (r.source !== 'Point Tracker' || !r.market) continue;
+      const k = r.state + '|' + r.market + '|' + r.tactic;
+      const o = spots.get(k) || { state: r.state, market: r.market + (r.tactic === 'Cable' ? ' (cable)' : ''), names: [], points: 0, order: r.tactic === 'Cable' ? 1 : 0 };
+      for (const nm of String(r.creative || '').split(/,\s*/)) if (nm && !o.names.includes(nm)) o.names.push(nm);
+      o.points += r.points || 0; spots.set(k, o);
+    }
+    return { spots: [...spots.values()].sort((a, b) => a.order - b.order || a.market.localeCompare(b.market) || b.points - a.points), states: [...byState.values()], weeks: [...byWeek.values()].sort((a, b) => a.state.localeCompare(b.state) || b.week_num - a.week_num), digital: [...digital.values()].sort((a, b) => b.spend - a.spend) };
+  }
+  let current = null;
+  function render(doc) {
+    current = doc;
+    const rows = doc?.rows || [];
+    const stamp = $('#stamp');
+    if (!rows.length) { stamp.textContent = 'Not loaded yet'; $('#empty').hidden = false; $('#lead-overview').textContent = ''; return; }
+    $('#empty').hidden = true;
+    stamp.textContent = 'Updated ' + new Date(doc.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · from the 365 Point Tracker';
+    const { states, weeks, digital, spots } = aggregate(rows);
+    const T = states.reduce((a, s) => ({ spend: a.spend + s.total, b: a.b + s.broadcast, c: a.c + s.cable, d: a.d + s.digital, p: a.p + s.points }), { spend: 0, b: 0, c: 0, d: 0, p: 0 });
+    $('#lead-overview').textContent = `${fmt$(T.spend)} on air across ${states.length} states: ${fmt$(T.b)} broadcast, ${fmt$(T.c)} cable` + (T.d ? ` and ${fmt$(T.d)} digital.` : '. Digital to come.');
+    fillTable($('#t-states'), states, [['state', 'txt'], ['broadcast', '$'], ['cable', '$'], ['digital', '$'], ['total', '$'], ['points', 'n', 'hide']], true);
+    for (const s of states) {
+      const sec = ensurePage(s.state);
+      const wk = weeks.filter((w) => w.state === s.state);
+      const onAir = wk.filter((w) => w.total || w.points);
+      const markets = [...new Set(rows.filter((r) => r.state === s.state && r.tactic === 'Broadcast' && r.points > 0).map((r) => r.market))];
+      sec.querySelector('.s-lead').textContent = onAir.length
+        ? `${fmt$(s.total)} to date over ${onAir.length} week${onAir.length === 1 ? '' : 's'}, ${fmtN(s.points)} broadcast points in ${markets.join(', ')}.`
+        : 'Nothing on air yet.';
+      fillTable(sec.querySelector('.s-weeks'), onAir, [['week', 'txt'], ['dates', 'dim', 'hide'], ['points', 'n'], ['cable', '$'], ['digital', '$'], ['total', '$']], true);
+      fillTable(sec.querySelector('.s-spots'), spots.filter((x) => x.state === s.state).map((x) => ({ ...x, links: (doc.links || {})[s.state] })), [['market', 'txt'], ['names', 'links'], ['points', 'n']], false);
+      const ds = digital.filter((d) => d.state === s.state);
+      sec.querySelector('.s-digital').hidden = ds.length === 0;
+      sec.querySelector('.s-dig-note').hidden = ds.length > 0;
+      fillTable(sec.querySelector('.s-digital'), ds, [['tactic', 'txt'], ['market', 'dim', 'hide'], ['spend', '$']], ds.length > 1);
+    }
+  }
+
+  async function boot() {
+    render(null);
+    show(location.hash.slice(1) || 'overview');
+    try {
+      const res = await fetch('data.json?t=' + Date.now(), { cache: 'no-store' });
+      if (!res.ok) throw new Error(res.status);
+      render(await res.json());
+      show(location.hash.slice(1) || 'overview');
+    } catch (e) { $('#stamp').textContent = 'Could not load the numbers'; }
+  }
+  boot();
+})();
+</script>
+
+</body>
+</html>
