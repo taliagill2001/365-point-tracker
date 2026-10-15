@@ -205,8 +205,8 @@
       const st = byState.get(r.state) || { state: r.state, points: 0, broadcast: 0, cable: 0, radio: 0, digital: 0, total: 0 };
       if (r.planned) { st.planned = (st.planned || 0) + s; } else { st[b] += s; st.total += s; }
       if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
-      const wk = r.state + '|' + r.week_num;
-      const w = byWeek.get(wk) || { state: r.state, week: r.week || (r.week_num ? 'Week ' + r.week_num : 'Planned'), week_num: r.week_num || 0, dates: r.dates, points: 0, broadcast: 0, cable: 0, radio: 0, digital: 0, total: 0 };
+      const wk = r.state + '|' + (r.total && !r.planned ? 'digital' : r.week_num);
+      const w = byWeek.get(wk) || { state: r.state, week: r.week || (r.week_num ? 'Week ' + r.week_num : (r.total ? 'Digital to date' : 'Planned')), week_num: r.week_num || 0, dates: r.dates, points: 0, broadcast: 0, cable: 0, radio: 0, digital: 0, total: 0 };
       w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; if (r.planned && s) w.planned = true; byWeek.set(wk, w);
       addDigital(r);
     }
