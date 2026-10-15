@@ -252,7 +252,6 @@
         const tr = document.createElement('tr');
         const c1 = document.createElement('td');
         if (d.link) { const a = document.createElement('a'); a.href = d.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = d.creative; c1.append(a); } else c1.textContent = d.creative;
-        const fi = infoFor(d.creative, (current?.links || {})[s.state]); if (fi && fi.first) { const sp = document.createElement('span'); sp.className = 'first'; sp.textContent = fi.last ? ' (aired ' + fi.first + '–' + fi.last + ')' : ' (first aired ' + fi.first + ')'; c1.append(sp); }
         tr.append(c1); td(tr, d.tactics || '—', 'dim'); td(tr, d.audiences || '—', 'dim hide'); tb.append(tr);
       }
     }
