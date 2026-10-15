@@ -96,10 +96,10 @@
       <thead><tr><th>Market</th><th>Spots</th><th class="n">Points</th></tr></thead>
       <tbody></tbody>
     </table></div>
-    <h3>Digital by tactic</h3>
-    <p class="lead s-dig-note" hidden>No digital placed yet.</p>
+    <h3>Digital</h3>
+    <p class="lead s-dig-note">No digital placed yet.</p>
     <div class="tablewrap"><table class="s-digital">
-      <thead><tr><th>Tactic</th><th class="hide">Vendor / platform</th><th class="n">Spend ($)</th></tr></thead>
+      <thead><tr><th>Ad</th><th>Where</th><th class="hide">Audiences</th></tr></thead>
       <tbody></tbody>
     </table></div>
   </section>
@@ -179,19 +179,26 @@
   }
   function aggregate(rows) {
     const byState = new Map(), byWeek = new Map(), digital = new Map();
+    const addDigital = (r) => {
+      if (r.type !== 'Digital' || !r.creative || r.creative === 'Total digital spend' || r.creative === 'TBD') return;
+      const name = r.creative.replace(/\s*\(:\d+\)\s*$/, '');
+      const dk = r.state + '|' + name;
+      const d = digital.get(dk) || { state: r.state, creative: name, link: '', tactics: new Set(), audiences: new Set() };
+      if (r.link) d.link = r.link;
+      if (r.tactic && r.tactic !== 'All digital') d.tactics.add(r.tactic);
+      if (r.audience) d.audiences.add(r.audience);
+      digital.set(dk, d);
+    };
     const bucket = (r) => r.type === 'Digital' ? 'digital' : r.tactic === 'Cable' ? 'cable' : 'broadcast';
     for (const r of rows) {
+      if (r.source === 'placement') { addDigital(r); continue; }
       const s = r.spend || 0, b = bucket(r);
       const st = byState.get(r.state) || { state: r.state, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
       st[b] += s; st.total += s; if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
       const wk = r.state + '|' + r.week_num;
       const w = byWeek.get(wk) || { state: r.state, week: r.week, week_num: r.week_num, dates: r.dates, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
       w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; byWeek.set(wk, w);
-      if (r.type === 'Digital') {
-        const dk = r.state + '|' + r.tactic + '|' + (r.market || '');
-        const d = digital.get(dk) || { state: r.state, tactic: r.tactic, market: r.market || '', spend: 0 };
-        d.spend += s; digital.set(dk, d);
-      }
+      addDigital(r);
     }
     const spots = new Map();
     for (const r of rows) {
@@ -201,7 +208,7 @@
       for (const nm of String(r.creative || '').split(/,\s*/)) if (nm && !o.names.includes(nm)) o.names.push(nm);
       o.points += r.points || 0; spots.set(k, o);
     }
-    return { spots: [...spots.values()].sort((a, b) => a.order - b.order || a.market.localeCompare(b.market) || b.points - a.points), states: [...byState.values()], weeks: [...byWeek.values()].sort((a, b) => a.state.localeCompare(b.state) || b.week_num - a.week_num), digital: [...digital.values()].sort((a, b) => b.spend - a.spend) };
+    return { spots: [...spots.values()].sort((a, b) => a.order - b.order || a.market.localeCompare(b.market) || b.points - a.points), states: [...byState.values()], weeks: [...byWeek.values()].sort((a, b) => a.state.localeCompare(b.state) || b.week_num - a.week_num), digital: [...digital.values()].map((d) => ({ ...d, tactics: [...d.tactics].join(', '), audiences: [...d.audiences].join(', ') })).sort((a, b) => a.creative.localeCompare(b.creative)) };
   }
   let current = null;
   function render(doc) {
@@ -228,7 +235,13 @@
       const ds = digital.filter((d) => d.state === s.state);
       sec.querySelector('.s-digital').hidden = ds.length === 0;
       sec.querySelector('.s-dig-note').hidden = ds.length > 0;
-      fillTable(sec.querySelector('.s-digital'), ds, [['tactic', 'txt'], ['market', 'dim', 'hide'], ['spend', '$']], ds.length > 1);
+      const tb = sec.querySelector('.s-digital tbody'); tb.replaceChildren();
+      for (const d of ds) {
+        const tr = document.createElement('tr');
+        const c1 = document.createElement('td');
+        if (d.link) { const a = document.createElement('a'); a.href = d.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = d.creative; c1.append(a); } else c1.textContent = d.creative;
+        tr.append(c1); td(tr, d.tactics || '—', 'dim'); td(tr, d.audiences || '—', 'dim hide'); tb.append(tr);
+      }
     }
   }
 
