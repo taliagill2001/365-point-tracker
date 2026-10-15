@@ -63,7 +63,7 @@
 
 <div class="wrap">
   <h1>Project 365 — Paid Media</h1>
-  <p class="sub">Linear (broadcast and cable) to date, with digital by tactic as it is placed. All points in :30 equivalents.</p>
+  <p class="sub">Linear (broadcast, cable and radio) to date, with digital by tactic as it is placed. All points in :30 equivalents.</p>
   <div class="bar">
     <span class="stamp" id="stamp">Loading…</span>
 
@@ -75,7 +75,7 @@
     <h2>All states</h2>
     <p class="lead" id="lead-overview">—</p>
     <div class="tablewrap"><table id="t-states">
-      <thead><tr><th>State</th><th class="n">Broadcast ($)</th><th class="n">Cable ($)</th><th class="n">Digital ($)</th><th class="n">Total ($)</th><th class="n hide">Bcast pts</th></tr></thead>
+      <thead><tr><th>State</th><th class="n">Broadcast ($)</th><th class="n">Cable ($)</th><th class="n">Radio ($)</th><th class="n">Digital ($)</th><th class="n">Total ($)</th><th class="n hide">Bcast pts</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <p class="empty" id="empty" hidden>No numbers yet.</p>
@@ -90,7 +90,7 @@
     <p class="lead s-lead"></p>
     <h3>Week by week</h3>
     <div class="tablewrap"><table class="s-weeks">
-      <thead><tr><th>Week</th><th class="hide">Dates</th><th class="n">Broadcast (pts)</th><th class="n">Cable ($)</th><th class="n">Digital ($)</th><th class="n">Total spend ($)</th></tr></thead>
+      <thead><tr><th>Week</th><th class="hide">Dates</th><th class="n">Broadcast (pts)</th><th class="n">Cable ($)</th><th class="n">Radio ($)</th><th class="n">Digital ($)</th><th class="n">Total spend ($)</th></tr></thead>
       <tbody></tbody>
     </table></div>
     <h3>Spots on air</h3>
@@ -198,14 +198,15 @@
       if (r.audience) d.audiences.add(r.audience);
       digital.set(dk, d);
     };
-    const bucket = (r) => r.type === 'Digital' ? 'digital' : r.tactic === 'Cable' ? 'cable' : 'broadcast';
+    const bucket = (r) => r.type === 'Digital' ? 'digital' : r.tactic === 'Cable' ? 'cable' : r.tactic === 'Radio' ? 'radio' : 'broadcast';
     for (const r of rows) {
       if (r.source === 'placement') { addDigital(r); continue; }
       const s = r.spend || 0, b = bucket(r);
-      const st = byState.get(r.state) || { state: r.state, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
-      st[b] += s; st.total += s; if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
+      const st = byState.get(r.state) || { state: r.state, points: 0, broadcast: 0, cable: 0, radio: 0, digital: 0, total: 0 };
+      if (r.planned) { st.planned = (st.planned || 0) + s; } else { st[b] += s; st.total += s; }
+      if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
       const wk = r.state + '|' + r.week_num;
-      const w = byWeek.get(wk) || { state: r.state, week: r.week, week_num: r.week_num, dates: r.dates, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
+      const w = byWeek.get(wk) || { state: r.state, week: r.week || (r.week_num ? 'Week ' + r.week_num : 'Planned'), week_num: r.week_num || 0, dates: r.dates, points: 0, broadcast: 0, cable: 0, radio: 0, digital: 0, total: 0 };
       w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; if (r.planned && s) w.planned = true; byWeek.set(wk, w);
       addDigital(r);
     }
@@ -213,11 +214,11 @@
     for (const r of rows) {
       if (r.source !== 'Point Tracker' || !r.market) continue;
       const k = r.state + '|' + r.market + '|' + r.tactic;
-      const o = spots.get(k) || { state: r.state, market: r.market + (r.tactic === 'Cable' ? ' (cable)' : ''), names: [], points: 0, order: r.tactic === 'Cable' ? 1 : 0 };
+      const o = spots.get(k) || { state: r.state, market: r.market + (r.tactic === 'Cable' ? ' (cable)' : r.tactic === 'Radio' ? ' (radio)' : ''), names: [], points: 0, order: r.tactic === 'Cable' ? 1 : r.tactic === 'Radio' ? 2 : 0 };
       for (const nm of String(r.creative || '').split(/,\s*/)) if (nm && !o.names.includes(nm)) o.names.push(nm);
       o.points += r.points || 0; spots.set(k, o);
     }
-    return { spots: [...spots.values()].sort((a, b) => a.order - b.order || a.market.localeCompare(b.market) || b.points - a.points), states: [...byState.values()], weeks: [...byWeek.values()].sort((a, b) => a.state.localeCompare(b.state) || b.week_num - a.week_num), digital: [...digital.values()].map((d) => ({ ...d, tactics: [...d.tactics].join(', '), audiences: [...d.audiences].join(', ') })).sort((a, b) => a.creative.localeCompare(b.creative)) };
+    return { spots: [...spots.values()].sort((a, b) => a.order - b.order || a.market.localeCompare(b.market) || b.points - a.points), states: [...byState.values()], weeks: [...byWeek.values()].sort((a, b) => a.state.localeCompare(b.state) || (a.week_num === 0) - (b.week_num === 0) || b.week_num - a.week_num), digital: [...digital.values()].map((d) => ({ ...d, tactics: [...d.tactics].join(', '), audiences: [...d.audiences].join(', ') })).sort((a, b) => a.creative.localeCompare(b.creative)) };
   }
   let current = null;
   function render(doc) {
@@ -228,19 +229,20 @@
     $('#empty').hidden = true;
     stamp.textContent = 'Updated ' + new Date(doc.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · from the 365 Point Tracker';
     const { states, weeks, digital, spots } = aggregate(rows);
-    const T = states.reduce((a, s) => ({ spend: a.spend + s.total, b: a.b + s.broadcast, c: a.c + s.cable, d: a.d + s.digital, p: a.p + s.points }), { spend: 0, b: 0, c: 0, d: 0, p: 0 });
-    const plannedTotal = weeks.filter((w) => w.planned).reduce((a, w) => a + w.total, 0);
-    $('#lead-overview').textContent = `${fmt$(T.spend - plannedTotal)} on air across ${states.length} states: ${fmt$(T.b)} broadcast, ${fmt$(T.c)} cable` + (T.d ? ` and ${fmt$(T.d)} digital` : '') + (plannedTotal ? `, plus ${fmt$(plannedTotal)} planned.` : '.');
-    fillTable($('#t-states'), states, [['state', 'txt'], ['broadcast', '$'], ['cable', '$'], ['digital', '$'], ['total', '$'], ['points', 'n', 'hide']], true);
+    const T = states.reduce((a, s) => ({ spend: a.spend + s.total, b: a.b + s.broadcast, c: a.c + s.cable, r: a.r + s.radio, d: a.d + s.digital, p: a.p + s.points }), { spend: 0, b: 0, c: 0, r: 0, d: 0, p: 0 });
+    const plannedTotal = states.reduce((a, s) => a + (s.planned || 0), 0);
+    $('#lead-overview').textContent = `${fmt$(T.spend)} on air across ${states.length} states: ${fmt$(T.b)} broadcast, ${fmt$(T.c)} cable` + (T.r ? `, ${fmt$(T.r)} radio` : '') + (T.d ? ` and ${fmt$(T.d)} digital` : '') + (plannedTotal ? `, plus ${fmt$(plannedTotal)} planned.` : '.');
+    fillTable($('#t-states'), states, [['state', 'txt'], ['broadcast', '$'], ['cable', '$'], ['radio', '$'], ['digital', '$'], ['total', '$'], ['points', 'n', 'hide']], true);
     for (const s of states) {
       const sec = ensurePage(s.state);
       const wk = weeks.filter((w) => w.state === s.state);
       const onAir = wk.filter((w) => w.total || w.points);
+      const onAirWeeks = onAir.filter((w) => w.week_num > 0);
       const markets = [...new Set(rows.filter((r) => r.state === s.state && r.tactic === 'Broadcast' && r.points > 0).map((r) => r.market))];
       sec.querySelector('.s-lead').textContent = onAir.length
-        ? `${fmt$(s.total)} to date over ${onAir.length} week${onAir.length === 1 ? '' : 's'}, ${fmtN(s.points)} broadcast points in ${markets.join(', ')}.`
+        ? `${fmt$(onAirWeeks.reduce((a, w) => a + (w.planned ? 0 : w.total), 0))} to date over ${onAirWeeks.length} week${onAirWeeks.length === 1 ? '' : 's'}, ${fmtN(s.points)} broadcast points in ${markets.join(', ')}` + (wk.some((w) => w.planned && w.total) ? `, plus ${fmt$(wk.filter((w) => w.planned).reduce((a, w) => a + w.total, 0))} planned.` : '.')
         : 'Nothing on air yet.';
-      fillTable(sec.querySelector('.s-weeks'), onAir, [['week', 'txt'], ['dates', 'dim', 'hide'], ['points', 'n'], ['cable', '$'], ['digital', '$'], ['total', '$']], true);
+      fillTable(sec.querySelector('.s-weeks'), onAir, [['week', 'txt'], ['dates', 'dim', 'hide'], ['points', 'n'], ['cable', '$'], ['radio', '$'], ['digital', '$'], ['total', '$']], true);
       fillTable(sec.querySelector('.s-spots'), spots.filter((x) => x.state === s.state).map((x) => ({ ...x, links: (doc.links || {})[s.state] })), [['market', 'txt'], ['names', 'links'], ['points', 'n']], false);
       const ds = digital.filter((d) => d.state === s.state);
       sec.querySelector('.s-digital').hidden = ds.length === 0;
