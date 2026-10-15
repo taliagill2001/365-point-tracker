@@ -49,6 +49,8 @@
   th.n, td.n { text-align: right; white-space: nowrap; }
   tr.total td { font-weight: 600; border-bottom: 0; border-top: 1px solid var(--rule-strong); }
   td.dim, tr.pending td { color: var(--muted); }
+  tr.planned td { color: var(--muted); font-style: italic; }
+  .first { color: var(--muted); font-size: .85em; }
   .empty { color: var(--muted); padding: 2rem 0; }
   td a { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
   .foot { margin-top: 2.5rem; color: var(--muted); font-size: .8rem; }
@@ -143,18 +145,23 @@
   }
   function td(tr, text, cls) { const c = document.createElement('td'); c.textContent = text; if (cls) c.className = cls; tr.append(c); return c; }
   const normName = (s) => String(s).toLowerCase().replace(/[()]/g, ' ').replace(/\b\d+\b/g, ' ').replace(/\s+/g, ' ').trim();
-  function linkFor(name, links) {
+  function infoFor(name, links) {
     const n = normName(name); if (!n) return null;
-    for (const [k, url] of Object.entries(links || {})) { const kn = normName(k); if (kn === n || n.startsWith(kn + ' ') || kn.startsWith(n + ' ')) return url; }
+    for (const [k, v] of Object.entries(links || {})) {
+      const kn = normName(k);
+      if (kn === n || n.startsWith(kn + ' ') || kn.startsWith(n + ' ')) return typeof v === 'string' ? { url: v, first: '' } : (v || { url: '', first: '' });
+    }
     return null;
   }
+  const linkFor = (name, links) => (infoFor(name, links) || {}).url || null;
   function tdLinks(tr, names, links) {
     const c = document.createElement('td');
     names.forEach((nm, i) => {
       if (i) c.append(', ');
-      const url = linkFor(nm, links);
-      if (url && /^https?:\/\//.test(url)) { const a = document.createElement('a'); a.href = url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = nm; c.append(a); }
+      const info = infoFor(nm, links) || {};
+      if (info.url && /^https?:\/\//.test(info.url)) { const a = document.createElement('a'); a.href = info.url; a.target = '_blank'; a.rel = 'noopener'; a.textContent = nm; c.append(a); }
       else c.append(nm);
+      if (info.first) { const s = document.createElement('span'); s.className = 'first'; s.textContent = ' (first aired ' + info.first + ')'; c.append(s); }
     });
     if (!names.length) c.textContent = '—';
     tr.append(c);
@@ -164,9 +171,11 @@
     for (const r of rows) {
       const tr = document.createElement('tr');
       if ('week' in r && !r.total && !r.points) tr.className = 'pending';
+      if (r.planned) tr.classList.add('planned');
       for (const [f, kind, extra] of cols) {
         if (kind === 'links') { tdLinks(tr, r[f] || [], r.links); continue; }
-        const v = kind === '$' ? money(r[f]) : kind === 'n' ? count(r[f]) : (r[f] || '—');
+        let v = kind === '$' ? money(r[f]) : kind === 'n' ? count(r[f]) : (r[f] || '—');
+        if (f === 'total' && r.planned && r.total) v += ' planned';
         td(tr, v, [kind === '$' || kind === 'n' ? 'n' : '', kind === 'dim' ? 'dim' : '', extra || ''].join(' ').trim());
       }
       tb.append(tr);
@@ -197,7 +206,7 @@
       st[b] += s; st.total += s; if (r.tactic === 'Broadcast') st.points += r.points || 0; byState.set(r.state, st);
       const wk = r.state + '|' + r.week_num;
       const w = byWeek.get(wk) || { state: r.state, week: r.week, week_num: r.week_num, dates: r.dates, points: 0, broadcast: 0, cable: 0, digital: 0, total: 0 };
-      w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; byWeek.set(wk, w);
+      w[b] += s; w.total += s; if (r.tactic === 'Broadcast') w.points += r.points || 0; if (!w.dates && r.dates) w.dates = r.dates; if (r.planned && s) w.planned = true; byWeek.set(wk, w);
       addDigital(r);
     }
     const spots = new Map();
@@ -220,7 +229,8 @@
     stamp.textContent = 'Updated ' + new Date(doc.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) + ' · from the 365 Point Tracker';
     const { states, weeks, digital, spots } = aggregate(rows);
     const T = states.reduce((a, s) => ({ spend: a.spend + s.total, b: a.b + s.broadcast, c: a.c + s.cable, d: a.d + s.digital, p: a.p + s.points }), { spend: 0, b: 0, c: 0, d: 0, p: 0 });
-    $('#lead-overview').textContent = `${fmt$(T.spend)} on air across ${states.length} states: ${fmt$(T.b)} broadcast, ${fmt$(T.c)} cable` + (T.d ? ` and ${fmt$(T.d)} digital.` : '. Digital to come.');
+    const plannedTotal = weeks.filter((w) => w.planned).reduce((a, w) => a + w.total, 0);
+    $('#lead-overview').textContent = `${fmt$(T.spend - plannedTotal)} on air across ${states.length} states: ${fmt$(T.b)} broadcast, ${fmt$(T.c)} cable` + (T.d ? ` and ${fmt$(T.d)} digital` : '') + (plannedTotal ? `, plus ${fmt$(plannedTotal)} planned.` : '.');
     fillTable($('#t-states'), states, [['state', 'txt'], ['broadcast', '$'], ['cable', '$'], ['digital', '$'], ['total', '$'], ['points', 'n', 'hide']], true);
     for (const s of states) {
       const sec = ensurePage(s.state);
@@ -240,6 +250,7 @@
         const tr = document.createElement('tr');
         const c1 = document.createElement('td');
         if (d.link) { const a = document.createElement('a'); a.href = d.link; a.target = '_blank'; a.rel = 'noopener'; a.textContent = d.creative; c1.append(a); } else c1.textContent = d.creative;
+        const fi = infoFor(d.creative, (current?.links || {})[s.state]); if (fi && fi.first) { const sp = document.createElement('span'); sp.className = 'first'; sp.textContent = ' (first aired ' + fi.first + ')'; c1.append(sp); }
         tr.append(c1); td(tr, d.tactics || '—', 'dim'); td(tr, d.audiences || '—', 'dim hide'); tb.append(tr);
       }
     }
