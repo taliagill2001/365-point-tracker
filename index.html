@@ -93,7 +93,7 @@
       <thead><tr><th>Week</th><th class="hide">Dates</th><th class="n">Broadcast (pts)</th><th class="n">Cable ($)</th><th class="n">Radio ($)</th><th class="n">Digital ($)</th><th class="n">Total spend ($)</th></tr></thead>
       <tbody></tbody>
     </table></div>
-    <h3>Spots on air</h3>
+    <h3 class="s-spots-h">Spots on air</h3>
     <div class="tablewrap"><table class="s-spots">
       <thead><tr><th>Market</th><th>Spots</th><th class="n">Points</th></tr></thead>
       <tbody></tbody>
@@ -213,8 +213,8 @@
     const spots = new Map();
     for (const r of rows) {
       if (r.source !== 'Point Tracker' || !r.market) continue;
-      const k = r.state + '|' + r.market + '|' + r.tactic;
-      const o = spots.get(k) || { state: r.state, market: r.market + (r.tactic === 'Cable' ? ' (cable)' : r.tactic === 'Radio' ? ' (radio)' : ''), names: [], points: 0, order: r.tactic === 'Cable' ? 1 : r.tactic === 'Radio' ? 2 : 0 };
+      const k = r.state + '|' + r.week_num + '|' + r.market + '|' + r.tactic;
+      const o = spots.get(k) || { state: r.state, week_num: r.week_num, market: r.market + (r.tactic === 'Cable' ? ' (cable)' : r.tactic === 'Radio' ? ' (radio)' : ''), names: [], points: 0, order: r.tactic === 'Cable' ? 1 : r.tactic === 'Radio' ? 2 : 0 };
       for (const nm of String(r.creative || '').split(/,\s*/)) if (nm && !o.names.includes(nm)) o.names.push(nm);
       o.points += r.points || 0; spots.set(k, o);
     }
@@ -243,7 +243,11 @@
         ? `${fmt$(onAirWeeks.reduce((a, w) => a + (w.planned ? 0 : w.total), 0))} to date over ${onAirWeeks.length} week${onAirWeeks.length === 1 ? '' : 's'}, ${fmtN(s.points)} broadcast points in ${markets.join(', ')}` + (wk.some((w) => w.planned && w.total) ? `, plus ${fmt$(wk.filter((w) => w.planned).reduce((a, w) => a + w.total, 0))} planned.` : '.')
         : 'Nothing on air yet.';
       fillTable(sec.querySelector('.s-weeks'), onAir, [['week', 'txt'], ['dates', 'dim', 'hide'], ['points', 'n'], ['cable', '$'], ['radio', '$'], ['digital', '$'], ['total', '$']], true);
-      fillTable(sec.querySelector('.s-spots'), spots.filter((x) => x.state === s.state).map((x) => ({ ...x, links: (doc.links || {})[s.state] })), [['market', 'txt'], ['names', 'links'], ['points', 'n']], false);
+      const activeWeeks = wk.filter((w) => w.week_num > 0 && !w.planned && (w.points || w.total)).map((w) => w.week_num);
+      const curWeek = activeWeeks.length ? Math.min(...activeWeeks) : 0;
+      const curInfo = wk.find((w) => w.week_num === curWeek);
+      sec.querySelector('.s-spots-h').textContent = curInfo ? `Spots on air · ${curInfo.week}${curInfo.dates ? ' (' + curInfo.dates + ')' : ''}` : 'Spots on air';
+      fillTable(sec.querySelector('.s-spots'), spots.filter((x) => x.state === s.state && x.week_num === curWeek).map((x) => ({ ...x, links: (doc.links || {})[s.state] })), [['market', 'txt'], ['names', 'links'], ['points', 'n']], false);
       const ds = digital.filter((d) => d.state === s.state);
       sec.querySelector('.s-digital').hidden = ds.length === 0;
       sec.querySelector('.s-dig-note').hidden = ds.length > 0;
